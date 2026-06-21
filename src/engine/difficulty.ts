@@ -1,4 +1,4 @@
-import type { Club, League, Player, Manager } from './types'
+import type { Club, League } from './types'
 
 export interface ScenarioPreset {
   name: string
@@ -79,9 +79,7 @@ export function checkGameOverConditions(
 }
 
 export function checkMilestones(
-  playerClub: Club,
-  playerLeague: League,
-  season: number
+  playerClub: Club
 ): string[] {
   const milestones: string[] = []
 

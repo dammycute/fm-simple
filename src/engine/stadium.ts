@@ -1,4 +1,4 @@
-import type { Club, SponsorDeal, StadiumExpansion } from './types'
+import type { SponsorDeal, StadiumExpansion } from './types'
 
 // ── Stadium Expansion ───────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ const sponsorNames = [
   'LocalTech Solutions', 'RegionalBank', 'CityBrewery', 'AutoMart',
 ]
 
-const sponsorTypes = ['shirt', 'stadiumNaming', 'kitSupplier', 'secondary']
+// (sponsor types used inline via the types array in gameStore)
 
 export function generateSponsorDeal(clubReputation: number, type: string): SponsorDeal {
   const repScale = Math.max(0.1, clubReputation / 100)

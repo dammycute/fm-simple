@@ -43,7 +43,7 @@ function getMoraleMod(squad: Club['squad']): number {
   return 0.9 + (avgMorale / 100) * 0.2
 }
 
-export function simulateMatch(fixture: Fixture, homeClub: Club, awayClub: Club): Required<Fixture>['result'] {
+export function simulateMatch(_fixture: Fixture, homeClub: Club, awayClub: Club): Required<Fixture>['result'] {
   const homeAbility = getBestXI(homeClub)
   const awayAbility = getBestXI(awayClub)
 

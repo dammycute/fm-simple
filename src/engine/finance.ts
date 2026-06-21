@@ -1,4 +1,4 @@
-import type { Club, FinanceLedger, AmortEntry } from './types'
+import type { Club, AmortEntry } from './types'
 
 // ── Config ──────────────────────────────────────────────────────────
 
@@ -118,7 +118,7 @@ export function wageHealthColor(ratio: number): 'healthy' | 'risky' | 'danger' {
 
 export function processWeeklyFinances(
   club: Club,
-  week: number,
+  _week: number,
   totalWeeksInSeason: number,
   positionFromBottom: number,
   formFactor: number

@@ -6,7 +6,7 @@ import { simulateWeek, isSeasonComplete, rolloverSeason, computePromotionsRelega
 import { generateFixtures } from '../engine/fixtures'
 import { generateManager } from '../data/managerGenerator'
 import { buyPlayer as executeBuy } from '../engine/transferMarket'
-import { createExpansionProject, generateSponsorDeal } from '../engine/stadium'
+import { createExpansionProject, generateSponsorDeal, getSponsorshipSummary } from '../engine/stadium'
 import { pickRandomEvent, resolveEventChoice, type EventTemplate } from '../engine/events'
 import { applyScenarioToClub, checkGameOverConditions, checkMilestones } from '../engine/difficulty'
 import { processWeeklyFinances } from '../engine/finance'
@@ -72,7 +72,7 @@ function updateClubInLeagues(leagues: League[], clubId: string, updater: (c: Clu
 
 export const useGameStore = create<GameStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       ...initialState,
 
       newGame: (clubId: string, customName?: string, scenario?: string) => {
@@ -190,7 +190,7 @@ export const useGameStore = create<GameStore>()(
               }
             }
 
-            const milestones = checkMilestones(updatedClub, curLeague, s.season)
+            const milestones = checkMilestones(updatedClub)
             for (const m of milestones) {
               newLog.push(`Milestone: ${m}`)
             }

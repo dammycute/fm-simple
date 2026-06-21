@@ -32,7 +32,6 @@ export default function SquadPage() {
 function PlayerSection({
   title,
   players,
-  playerClubId,
   onSell,
   onToggleList,
 }: {

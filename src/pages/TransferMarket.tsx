@@ -11,7 +11,7 @@ export default function TransferMarketPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
   const [bidAmount, setBidAmount] = useState(0)
   const [contractLength, setContractLength] = useState(3)
-  const [installment, setInstallment] = useState(true)
+  const [installment] = useState(true)
   const [offerResult, setOfferResult] = useState<string | null>(null)
 
   if (!playerClubId) return <h1 className="text-2xl font-bold text-text-primary">No game in progress</h1>

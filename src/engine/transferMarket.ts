@@ -4,7 +4,7 @@ import { createAmortEntry } from './finance'
 export function calculateOfferSuccess(
   bidAmount: number,
   playerValue: number,
-  sellingClubReputation: number
+  _sellingClubReputation: number
 ): { accepted: boolean; counterOffer?: number } {
   const ratio = bidAmount / playerValue
 

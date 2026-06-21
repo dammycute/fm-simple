@@ -1,4 +1,4 @@
-import type { GameEvent, Club } from './types'
+import type { Club } from './types'
 
 export interface EventTemplate {
   id: string
