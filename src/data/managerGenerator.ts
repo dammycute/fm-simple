@@ -1,4 +1,4 @@
-import type { Manager } from './types'
+import type { Manager } from '../engine/types'
 
 const managerFirstNames = [
   'Gary', 'Steve', 'Michael', 'Paul', 'David', 'Mark', 'Darren', 'Craig',

@@ -21,7 +21,7 @@ export function createLeague(tier: number): League {
   const clubsData = clubDataMap[tier]
   if (!clubsData) throw new Error(`Unknown tier: ${tier}`)
 
-  const clubs: Club[] = clubsData.map((cd, idx) => ({
+  const clubs: Club[] = clubsData.map((cd) => ({
     id: `${cd.shortName}-${tier}`,
     name: cd.name,
     shortName: cd.shortName,

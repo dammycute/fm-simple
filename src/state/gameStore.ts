@@ -164,7 +164,7 @@ export const useGameStore = create<GameStore>()(
             // Wire board confidence and fan trust
             updatedClub = {
               ...updatedClub,
-              boardConfidence: updateBoardConfidence(updatedClub, position, curLeague.rules.clubCount, targetPosition),
+              boardConfidence: updateBoardConfidence(updatedClub, position, targetPosition),
               fanTrust: updateFanTrust(updatedClub, recentResults, 0),
             }
 

@@ -1,4 +1,4 @@
-import type { Player, ClubData } from './types'
+import type { Player, ClubData } from '../engine/types'
 
 const firstNames = [
   'James', 'Oliver', 'George', 'Harry', 'Jack', 'Jacob', 'Charlie', 'Thomas',

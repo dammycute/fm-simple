@@ -3,7 +3,6 @@ import type { Club } from './types'
 export function updateBoardConfidence(
   club: Club,
   leaguePosition: number,
-  leagueSize: number,
   targetPosition: number
 ): number {
   let delta = 0

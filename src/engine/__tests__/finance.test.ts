@@ -33,6 +33,7 @@ function makeMockClub(id: string, cash: number, rollingLoss: number): Club {
       revenueByCategory: { matchday: 0, tv: 0, commercial: 0, prizeMoney: 0, sales: 0 },
       expenseByCategory: { wages: 0, amortization: 0, agentFees: 0, upkeep: 0, interest: 0 },
       rollingLoss3yr: rollingLoss,
+      rollingLossHistory: [],
       amortizationSchedule: [],
     },
     squad: [],
