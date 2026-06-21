@@ -45,7 +45,7 @@ export default function Finance() {
     <div>
       <h1 className="text-2xl font-bold text-text-primary mb-4">Finance Center</h1>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
         <div className="bg-bg-surface border border-border rounded p-4">
           <p className="text-text-secondary text-sm">Cash</p>
           <p className="text-xl font-bold text-text-primary">${fin.cash.toLocaleString()}</p>
@@ -62,8 +62,8 @@ export default function Finance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-bg-surface border border-border rounded p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Revenue (YTD)</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-text-secondary">Matchday</span><span className="text-positive">${fin.revenueByCategory.matchday.toLocaleString()}</span></div>
@@ -76,7 +76,7 @@ export default function Finance() {
             </div>
           </div>
         </div>
-        <div className="bg-bg-surface border border-border rounded p-4">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Expenses (YTD)</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-text-secondary">Wages</span><span className="text-negative">${fin.expenseByCategory.wages.toLocaleString()}</span></div>
@@ -91,15 +91,15 @@ export default function Finance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-bg-surface border border-border rounded p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Wage-to-Revenue</h2>
           <p className={`text-2xl font-bold ${wtrStatus === 'healthy' ? 'text-positive' : wtrStatus === 'risky' ? 'text-warning' : 'text-negative'}`}>
             {(wtr * 100).toFixed(1)}%
           </p>
           <p className="text-text-secondary text-sm">{wtrStatus === 'healthy' ? 'Healthy' : wtrStatus === 'risky' ? 'Risky' : 'Danger Zone'}</p>
         </div>
-        <div className="bg-bg-surface border border-border rounded p-4">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">PSR / FFP Compliance</h2>
           <p className={`text-xl font-bold ${psr.compliant ? 'text-positive' : 'text-negative'}`}>
             {psr.compliant ? 'Compliant' : 'BREACHED'}
@@ -108,8 +108,8 @@ export default function Finance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-bg-surface border border-border rounded p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Ticket Pricing</h2>
           <p className="text-text-primary text-xl font-bold">${club.ticketPrices.standard}</p>
           <p className="text-text-secondary text-sm">Est. Attendance: {attendance.toLocaleString()} | Est. Matchday Rev: ${matchdayRev.toLocaleString()}</p>
@@ -129,7 +129,7 @@ export default function Finance() {
           </div>
         </div>
 
-        <div className="bg-bg-surface border border-border rounded p-4">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Sponsorships</h2>
           {club.sponsors.length === 0 ? (
             <div>

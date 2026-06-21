@@ -20,6 +20,10 @@ html {
   color: var(--text-primary);
 }
 
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @theme {
   --color-bg-base: #0f1419;
   --color-bg-surface: #161d26;

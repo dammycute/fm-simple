@@ -33,6 +33,7 @@ export function buyPlayer(
   }
 
   const cashHit = installment ? Math.round(fee * 0.3) : fee
+  const deferredDebt = installment ? Math.round(fee * 0.7) : 0
 
   const updatedBuyer: Club = {
     ...buyingClub,
@@ -40,13 +41,14 @@ export function buyPlayer(
     finance: {
       ...buyingClub.finance,
       cash: buyingClub.finance.cash - cashHit,
+      debt: buyingClub.finance.debt + deferredDebt,
       revenueByCategory: { ...buyingClub.finance.revenueByCategory },
       expenseByCategory: {
         ...buyingClub.finance.expenseByCategory,
         amortization: buyingClub.finance.expenseByCategory.amortization + amortEntry.annualAmount,
       },
       amortizationSchedule: [...(buyingClub.finance.amortizationSchedule || []), amortEntry],
-      rollingLoss3yr: buyingClub.finance.rollingLoss3yr - (fee / contractLength),
+      rollingLoss3yr: buyingClub.finance.rollingLoss3yr + (fee / contractLength),
     },
   }
 
@@ -64,7 +66,7 @@ export function buyPlayer(
       },
       expenseByCategory: { ...sellingClub.finance.expenseByCategory },
       amortizationSchedule: (sellingClub.finance.amortizationSchedule || []).filter((e) => e.playerId !== player.id),
-      rollingLoss3yr: sellingClub.finance.rollingLoss3yr + Math.max(0, profitOnSale),
+      rollingLoss3yr: sellingClub.finance.rollingLoss3yr - profitOnSale,
     },
   }
 

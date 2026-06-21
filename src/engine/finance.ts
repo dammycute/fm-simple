@@ -159,9 +159,10 @@ export function processWeeklyFinances(
   expenses.amortization += weeklyAmort
 
   // Debt interest
+  let weeklyInterest = 0
   if (finance.debt > 0) {
     const yearlyInterest = Math.round(finance.debt * finance.interestRate)
-    const weeklyInterest = Math.round(yearlyInterest / totalWeeksInSeason)
+    weeklyInterest = Math.round(yearlyInterest / totalWeeksInSeason)
     expenses.interest += weeklyInterest
   }
 
@@ -169,7 +170,7 @@ export function processWeeklyFinances(
   const weeklyUpkeep = Math.round(club.stadiumCapacity * 0.5 / totalWeeksInSeason)
   expenses.upkeep += weeklyUpkeep
 
-  const weeklyProfit = weeklyTV + weeklyCommercial + (club.tier <= 4 ? matchdayRev : 0) - weeklyWages - weeklyAmort - expenses.interest - weeklyUpkeep
+  const weeklyProfit = weeklyTV + weeklyCommercial + matchdayRev - weeklyWages - weeklyAmort - weeklyInterest - weeklyUpkeep
 
   finance.cash += weeklyProfit
   finance.revenueByCategory = revenue

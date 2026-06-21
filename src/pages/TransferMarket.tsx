@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useGameStore, getPlayerClub, getPlayerLeague } from '../state/gameStore'
+import { useGameStore, getPlayerClub } from '../state/gameStore'
 import { getTransferList, calculateOfferSuccess } from '../engine/transferMarket'
+import { CardTable } from '../components/CardTable'
 
 export default function TransferMarketPage() {
   const playerClubId = useGameStore((s) => s.playerClubId)
@@ -16,12 +17,9 @@ export default function TransferMarketPage() {
   if (!playerClubId) return <h1 className="text-2xl font-bold text-text-primary">No game in progress</h1>
 
   const club = getPlayerClub({ leagues, playerClubId } as any)
-  const playerLeague = getPlayerLeague({ leagues, playerClubId } as any)
-
-  if (!club || !playerLeague) return <p className="text-negative">Club not found</p>
+  if (!club) return <p className="text-negative">Club not found</p>
 
   const transferList = getTransferList(leagues, playerClubId)
-  const clubMap = new Map(leagues.flatMap((l) => l.clubs).map((c) => [c.id, c]))
 
   const handleBid = (playerId: string, fromClubId: string) => {
     const entry = transferList.find((t) => t.player.id === playerId)
@@ -31,10 +29,10 @@ export default function TransferMarketPage() {
 
     if (result.accepted) {
       buyPlayer(playerId, fromClubId, bidAmount, contractLength, installment)
-      setOfferResult(`Offer accepted! Signed ${entry.player.name} for $${bidAmount.toLocaleString()}.`)
+      setOfferResult(`Signed ${entry.player.name} for $${bidAmount.toLocaleString()}.`)
       setSelectedPlayerId(null)
     } else if (result.counterOffer) {
-      setOfferResult(`Rejected. Counter offer: $${result.counterOffer.toLocaleString()}`)
+      setOfferResult(`Rejected. Counter: $${result.counterOffer.toLocaleString()}`)
     } else {
       setOfferResult('Offer rejected.')
     }
@@ -43,9 +41,8 @@ export default function TransferMarketPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary mb-4">Transfer Market</h1>
-
-      <p className="text-text-secondary mb-4">
-        Cash: ${club.finance.cash.toLocaleString()} | Squad wages: ${club.squad.reduce((s, p) => s + p.wage, 0).toLocaleString()}/w
+      <p className="text-text-secondary mb-4 text-sm">
+        Cash: ${club.finance.cash.toLocaleString()} | Wages: ${club.squad.reduce((s, p) => s + p.wage, 0).toLocaleString()}/w
       </p>
 
       {offerResult && (
@@ -55,81 +52,49 @@ export default function TransferMarketPage() {
         </div>
       )}
 
-      <div className="bg-bg-surface border border-border rounded overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-text-secondary border-b border-border">
-              <th className="text-left py-2 px-3">Name</th>
-              <th className="text-left px-2">Pos</th>
-              <th className="text-center px-2">Age</th>
-              <th className="text-center px-2">Ability</th>
-              <th className="text-right px-2">Value</th>
-              <th className="text-right px-2">Wage</th>
-              <th className="text-left px-3">Club</th>
-              <th className="text-right px-3">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transferList.length === 0 && (
-              <tr><td colSpan={8} className="py-4 text-center text-text-secondary">No players available</td></tr>
-            )}
-            {transferList.map((entry) => (
-              <tr key={entry.player.id} className="border-b border-border/50 text-text-primary">
-                <td className="py-1.5 px-3">{entry.player.name}</td>
-                <td className="px-2">{entry.player.position}</td>
-                <td className="text-center px-2">{entry.player.age}</td>
-                <td className={`text-center px-2 ${entry.player.ability >= 70 ? 'text-positive' : entry.player.ability >= 50 ? 'text-warning' : 'text-negative'}`}>
-                  {entry.player.ability}
-                </td>
-                <td className="text-right px-2">${entry.player.transferFee.toLocaleString()}</td>
-                <td className="text-right px-2">${entry.player.wage.toLocaleString()}</td>
-                <td className="px-3 text-text-secondary">{entry.club.shortName}</td>
-                <td className="text-right px-3">
-                  {selectedPlayerId === entry.player.id ? (
-                    <div className="flex gap-1 items-center justify-end">
-                      <input
-                        type="number"
-                        value={bidAmount}
-                        onChange={(e) => setBidAmount(Number(e.target.value))}
-                        className="w-20 bg-bg-base border border-border rounded px-1 py-0.5 text-xs text-text-primary"
-                        placeholder="Fee"
-                      />
-                      <select
-                        value={contractLength}
-                        onChange={(e) => setContractLength(Number(e.target.value))}
-                        className="bg-bg-base border border-border rounded px-1 py-0.5 text-xs text-text-primary"
-                      >
-                        <option value={2}>2yr</option>
-                        <option value={3}>3yr</option>
-                        <option value={4}>4yr</option>
-                        <option value={5}>5yr</option>
-                      </select>
-                      <button
-                        onClick={() => handleBid(entry.player.id, entry.club.id)}
-                        className="text-xs px-2 py-0.5 bg-accent text-black rounded font-semibold cursor-pointer"
-                      >
-                        Bid
-                      </button>
-                      <button
-                        onClick={() => { setSelectedPlayerId(null); setOfferResult(null) }}
-                        className="text-xs px-2 py-0.5 bg-border rounded cursor-pointer"
-                      >
-                        X
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { setSelectedPlayerId(entry.player.id); setBidAmount(entry.player.transferFee); setOfferResult(null) }}
-                      className="text-xs px-2 py-0.5 bg-bg-surface-raised border border-border rounded cursor-pointer hover:bg-border"
-                    >
-                      Bid
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
+        <CardTable
+          columns={[
+            { header: 'Name', accessor: (e) => e.player.name },
+            { header: 'Pos', accessor: (e) => e.player.position, align: 'center' },
+            { header: 'Age', accessor: (e) => e.player.age, align: 'center' },
+            { header: 'Abil', accessor: (e) => (
+              <span className={e.player.ability >= 70 ? 'text-positive' : e.player.ability >= 50 ? 'text-warning' : 'text-negative'}>{e.player.ability}</span>
+            ), align: 'center' },
+            { header: 'Value', accessor: (e) => `$${e.player.transferFee.toLocaleString()}`, align: 'right' },
+            { header: 'Wage', accessor: (e) => `$${e.player.wage.toLocaleString()}`, align: 'right', hideOnMobile: true },
+            { header: 'Club', accessor: (e) => e.club.shortName, hideOnMobile: true },
+            { header: '', accessor: (e) => selectedPlayerId === e.player.id ? (
+              <div className="flex gap-1 items-center justify-end">
+                <input type="number" value={bidAmount} onChange={(e2) => setBidAmount(Number(e2.target.value))}
+                  className="w-16 md:w-20 bg-bg-base border border-border rounded px-1 py-1 text-xs text-text-primary" placeholder="Fee" />
+                <select value={contractLength} onChange={(e2) => setContractLength(Number(e2.target.value))}
+                  className="bg-bg-base border border-border rounded px-1 py-1 text-xs text-text-primary">
+                  <option value={2}>2yr</option>
+                  <option value={3}>3yr</option>
+                  <option value={4}>4yr</option>
+                  <option value={5}>5yr</option>
+                </select>
+                <button onClick={() => handleBid(e.player.id, e.club.id)}
+                  className="text-xs px-2 py-1.5 bg-accent text-black rounded font-semibold cursor-pointer min-h-[28px]">Bid</button>
+                <button onClick={() => { setSelectedPlayerId(null); setOfferResult(null) }}
+                  className="text-xs px-2 py-1.5 bg-border rounded cursor-pointer min-h-[28px]">X</button>
+              </div>
+            ) : (
+              <button onClick={() => { setSelectedPlayerId(e.player.id); setBidAmount(e.player.transferFee); setOfferResult(null) }}
+                className="text-xs px-3 py-1.5 bg-bg-surface-raised border border-border rounded cursor-pointer hover:bg-border min-h-[28px]">Bid</button>
+            ), align: 'right' },
+          ]}
+          data={transferList}
+          rowKey={(e) => e.player.id}
+          cardTitle={(e) => e.player.name}
+          cardSubtitle={(e) => `${e.player.position} · ${e.club.shortName}`}
+          cardMeta={(e) => [
+            { label: 'Abil', value: e.player.ability, color: e.player.ability >= 70 ? 'text-positive' : e.player.ability >= 50 ? 'text-warning' : 'text-negative' },
+            { label: 'Value', value: `$${e.player.transferFee.toLocaleString()}` },
+          ]}
+          emptyMessage="No players available on the transfer market"
+        />
       </div>
     </div>
   )

@@ -66,6 +66,7 @@ export interface FinanceLedger {
   revenueByCategory: { matchday: number; tv: number; commercial: number; prizeMoney: number; sales: number }
   expenseByCategory: { wages: number; amortization: number; agentFees: number; upkeep: number; interest: number }
   rollingLoss3yr: number
+  rollingLossHistory: number[]
   amortizationSchedule: AmortEntry[]
 }
 

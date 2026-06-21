@@ -8,8 +8,8 @@ export default function NewsPage() {
     <div>
       <h1 className="text-2xl font-bold text-text-primary mb-4">News & Events</h1>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-bg-surface border border-border rounded p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Event Log</h2>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {eventLog.length === 0 && (
@@ -23,7 +23,7 @@ export default function NewsPage() {
           </div>
         </div>
 
-        <div className="bg-bg-surface border border-border rounded p-4">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3">Decision History</h2>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {events.length === 0 && (

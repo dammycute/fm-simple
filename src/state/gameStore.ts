@@ -2,13 +2,15 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Club, League, GameEvent, Manager } from '../engine/types'
 import { createAllLeagues } from '../data/leagueGenerator'
-import { simulateWeek } from '../engine/league'
+import { simulateWeek, isSeasonComplete, rolloverSeason, computePromotionsRelegations } from '../engine/league'
 import { generateFixtures } from '../engine/fixtures'
 import { generateManager } from '../data/managerGenerator'
 import { buyPlayer as executeBuy } from '../engine/transferMarket'
 import { createExpansionProject, generateSponsorDeal } from '../engine/stadium'
 import { pickRandomEvent, resolveEventChoice, type EventTemplate } from '../engine/events'
 import { applyScenarioToClub, checkGameOverConditions, checkMilestones } from '../engine/difficulty'
+import { processWeeklyFinances } from '../engine/finance'
+import { updateBoardConfidence, updateFanTrust, generateSeasonObjective } from '../engine/board'
 
 export interface GameState {
   weekNumber: number
@@ -21,6 +23,8 @@ export interface GameState {
   gameOverReason: string | null
   managerCandidates: Manager[]
   pendingEvent: EventTemplate | null
+  seasonComplete: boolean
+  rolloverData: { promotions: { clubId: string; fromTier: number; toTier: number }[]; relegations: { clubId: string; fromTier: number; toTier: number }[] } | null
 }
 
 interface GameActions {
@@ -39,6 +43,7 @@ interface GameActions {
   generateSponsors: () => void
   resolveEvent: (choiceIndex: number) => void
   dismissEvent: () => void
+  rolloverSeasonAction: () => void
 }
 
 type GameStore = GameState & GameActions
@@ -54,6 +59,8 @@ const initialState: GameState = {
   gameOverReason: null,
   managerCandidates: [],
   pendingEvent: null,
+  seasonComplete: false,
+  rolloverData: null,
 }
 
 function updateClubInLeagues(leagues: League[], clubId: string, updater: (c: Club) => Club): League[] {
@@ -85,6 +92,8 @@ export const useGameStore = create<GameStore>()(
                 const modded = applyScenarioToClub(club, scenario)
                 Object.assign(club, modded)
               }
+
+              club.seasonObjective = generateSeasonObjective(12, 24, club.tier)
 
               playerClub = club
               break
@@ -123,18 +132,57 @@ export const useGameStore = create<GameStore>()(
             }
           }
 
-          // Check for random events
+          // Process weekly finances and board updates for player club
           const currentClub = newLeagues.flatMap((l) => l.clubs).find((c) => c.id === s.playerClubId)
-          const newEvent = currentClub ? pickRandomEvent(currentClub) : null
-
-          // Check game-over conditions
           const curLeague = newLeagues.find((l) => l.clubs.some((c) => c.id === s.playerClubId))
+
           if (currentClub && curLeague) {
-            const { gameOver, reason } = checkGameOverConditions(currentClub, curLeague, currentClub.boardConfidence)
+            const totalWeeks = curLeague.rules.clubCount * 2 - 2
+            const sortedTable = [...curLeague.table].sort((a, b) => b.points - a.points)
+            const position = sortedTable.findIndex((r) => r.clubId === currentClub.id) + 1
+            const positionFromBottom = curLeague.rules.clubCount - position
+
+            const recentResults = playerLeagueFixtures
+              .filter((f) => f.result)
+              .map((f) => {
+                const isHome = f.homeId === currentClub.id
+                if (!f.result) return 'draw' as const
+                if (isHome && f.result.homeGoals > f.result.awayGoals) return 'win' as const
+                if (!isHome && f.result.awayGoals > f.result.homeGoals) return 'win' as const
+                if (f.result.homeGoals === f.result.awayGoals) return 'draw' as const
+                return 'loss' as const
+              })
+
+            const formFactor = recentResults.length > 0
+              ? recentResults.filter((r) => r === 'win').length / recentResults.length
+              : 0.5
+
+            // Wire finance
+            const targetPosition = curLeague.rules.clubCount <= 10 ? 1 : Math.ceil(curLeague.rules.clubCount / 2)
+            let updatedClub = processWeeklyFinances(currentClub, newWeek, totalWeeks, positionFromBottom, formFactor)
+
+            // Wire board confidence and fan trust
+            updatedClub = {
+              ...updatedClub,
+              boardConfidence: updateBoardConfidence(updatedClub, position, curLeague.rules.clubCount, targetPosition),
+              fanTrust: updateFanTrust(updatedClub, recentResults, 0),
+            }
+
+            // Update the club in leagues
+            const newLeaguesWithFinance = newLeagues.map((l) => ({
+              ...l,
+              clubs: l.clubs.map((c) => (c.id === updatedClub.id ? updatedClub : c)),
+            }))
+
+            // Check for random events
+            const newEvent = pickRandomEvent(updatedClub)
+
+            // Check game-over conditions
+            const { gameOver, reason } = checkGameOverConditions(updatedClub, curLeague, updatedClub.boardConfidence)
             if (gameOver) {
               return {
                 weekNumber: newWeek,
-                leagues: newLeagues,
+                leagues: newLeaguesWithFinance,
                 eventLog: [...newLog, reason!],
                 pendingEvent: null,
                 gameOver: true,
@@ -142,20 +190,37 @@ export const useGameStore = create<GameStore>()(
               }
             }
 
-            const milestones = checkMilestones(currentClub, curLeague, s.season)
+            const milestones = checkMilestones(updatedClub, curLeague, s.season)
             for (const m of milestones) {
               newLog.push(`Milestone: ${m}`)
             }
+
+            // Check if season is complete (all fixtures have results)
+            if (isSeasonComplete(newLeaguesWithFinance)) {
+              const { promotions, relegations } = computePromotionsRelegations(newLeaguesWithFinance)
+              newLog.push(`Season ${s.season} complete! Review the AGM to proceed.`)
+              return { weekNumber: newWeek, leagues: newLeaguesWithFinance, eventLog: newLog, pendingEvent: null, seasonComplete: true, rolloverData: { promotions, relegations } }
+            }
+
+            return { weekNumber: newWeek, leagues: newLeaguesWithFinance, eventLog: newLog, pendingEvent: newEvent ?? null }
           }
 
-          return { weekNumber: newWeek, leagues: newLeagues, eventLog: newLog, pendingEvent: newEvent ?? null }
+          return { weekNumber: newWeek, leagues: newLeagues, eventLog: newLog, pendingEvent: null }
         })
       },
 
       sackManager: () => {
         set((s) => {
           const club = s.leagues.flatMap((l) => l.clubs).find((c) => c.id === s.playerClubId)
-          if (!club?.manager) return s
+          if (!club) return s
+
+          if (!club.manager) {
+            return {
+              ...s,
+              managerCandidates: [generateManager(club.reputation), generateManager(club.reputation), generateManager(club.reputation)],
+              eventLog: [...s.eventLog, 'Searching for new manager candidates...'],
+            }
+          }
 
           const compo = club.manager.wageDemand * club.manager.contractYears * 52
           const newLeagues = updateClubInLeagues(s.leagues, s.playerClubId!, (c) => ({
@@ -260,7 +325,8 @@ export const useGameStore = create<GameStore>()(
               ...c.finance,
               cash: c.finance.cash + saleFee,
               revenueByCategory: { ...c.finance.revenueByCategory, sales: c.finance.revenueByCategory.sales + saleFee },
-              rollingLoss3yr: c.finance.rollingLoss3yr + Math.max(0, profit),
+              amortizationSchedule: (c.finance.amortizationSchedule || []).filter((e) => e.playerId !== playerId),
+              rollingLoss3yr: c.finance.rollingLoss3yr - profit,
             },
           }))
 
@@ -319,6 +385,35 @@ export const useGameStore = create<GameStore>()(
         set({ pendingEvent: null })
       },
 
+      rolloverSeasonAction: () => {
+        set((s) => {
+          const { leagues: newLeagues, newSeason, promotions, relegations } = rolloverSeason(s.leagues, s.season)
+          const newLog = [...s.eventLog, `--- Season ${s.season} Complete ---`]
+
+          // Update seasonObjective for player club
+          const playerClub = newLeagues.flatMap((l) => l.clubs).find((c) => c.id === s.playerClubId)
+          if (playerClub) {
+            const playerLeague = newLeagues.find((l) => l.clubs.some((c) => c.id === s.playerClubId))
+            if (playerLeague) {
+              playerClub.seasonObjective = generateSeasonObjective(
+                playerLeague.table.findIndex((r) => r.clubId === playerClub.id) + 1 || 12,
+                playerLeague.rules.clubCount,
+                playerClub.tier
+              )
+            }
+          }
+
+          return {
+            leagues: newLeagues,
+            season: newSeason,
+            weekNumber: 0,
+            eventLog: newLog,
+            seasonComplete: false,
+            rolloverData: { promotions, relegations },
+          }
+        })
+      },
+
       generateSponsors: () => {
         set((s) => {
           const club = s.leagues.flatMap((l) => l.clubs).find((c) => c.id === s.playerClubId)
@@ -360,6 +455,8 @@ export const useGameStore = create<GameStore>()(
         eventLog: state.eventLog,
         gameOver: state.gameOver,
         gameOverReason: state.gameOverReason,
+        managerCandidates: state.managerCandidates,
+        pendingEvent: state.pendingEvent,
       }),
     }
   )

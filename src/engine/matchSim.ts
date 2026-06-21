@@ -25,20 +25,41 @@ function randomPlayerName(club: Club): string {
   return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`
 }
 
-export function simulateMatch(fixture: Fixture, homeClub: Club, awayClub: Club): Required<Fixture>['result'] {
-  const homeAbility = homeClub.squad.reduce((s, p) => s + p.ability, 0) / Math.max(1, homeClub.squad.length)
-  const awayAbility = awayClub.squad.reduce((s, p) => s + p.ability, 0) / Math.max(1, awayClub.squad.length)
+function getBestXI(club: Club): number {
+  const sorted = [...club.squad].sort((a, b) => b.ability - a.ability)
+  const best11 = sorted.slice(0, 11)
+  if (best11.length === 0) return 40
+  return best11.reduce((s, p) => s + p.ability, 0) / best11.length
+}
 
-  const managerMod = 1.0
-  const moraleMod = 1.0
+function getManagerMod(manager: Club['manager']): number {
+  if (!manager) return 0.95
+  return 0.9 + (manager.tacticalSkill / 100) * 0.25
+}
+
+function getMoraleMod(squad: Club['squad']): number {
+  if (squad.length === 0) return 0.95
+  const avgMorale = squad.reduce((s, p) => s + p.morale, 0) / squad.length
+  return 0.9 + (avgMorale / 100) * 0.2
+}
+
+export function simulateMatch(fixture: Fixture, homeClub: Club, awayClub: Club): Required<Fixture>['result'] {
+  const homeAbility = getBestXI(homeClub)
+  const awayAbility = getBestXI(awayClub)
+
+  const homeManagerMod = getManagerMod(homeClub.manager)
+  const awayManagerMod = getManagerMod(awayClub.manager)
+  const homeMoraleMod = getMoraleMod(homeClub.squad)
+  const awayMoraleMod = getMoraleMod(awayClub.squad)
+
   const homeAdvantage = 1.1
 
-  const homeStrength = homeAbility * managerMod * moraleMod * homeAdvantage
-  const awayStrength = awayAbility * managerMod * moraleMod
+  const homeStrength = homeAbility * homeManagerMod * homeMoraleMod * homeAdvantage
+  const awayStrength = awayAbility * awayManagerMod * awayMoraleMod
 
-  const baseXg = 2.5
-  const expectedHome = clamp(baseXg * (homeStrength / Math.max(0.01, homeStrength + awayStrength)) * 2, 0, 6)
-  const expectedAway = clamp(baseXg * (awayStrength / Math.max(0.01, homeStrength + awayStrength)) * 2, 0, 6)
+  const baseXg = 1.35
+  const expectedHome = clamp(baseXg * (homeStrength / Math.max(0.01, homeStrength + awayStrength)) * 2, 0, 4)
+  const expectedAway = clamp(baseXg * (awayStrength / Math.max(0.01, homeStrength + awayStrength)) * 2, 0, 4)
 
   const homeGoals = poissonSample(expectedHome)
   const awayGoals = poissonSample(expectedAway)

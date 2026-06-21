@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../state/gameStore'
 import nationalLeagueClubs from '../data/clubs/national-league.json'
 import type { ClubData } from '../engine/types'
+import { CardTable } from '../components/CardTable'
 
 const natClubs = (nationalLeagueClubs as ClubData[]).map((c) => ({
   ...c,
@@ -124,7 +125,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
         <div className="bg-bg-surface border border-border rounded p-4">
           <p className="text-text-secondary text-sm">Board Confidence</p>
           <p className="text-xl font-bold text-positive">{club.boardConfidence}%</p>
@@ -139,38 +140,28 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-bg-surface border border-border rounded p-4 mb-6">
+      <div className="bg-bg-surface border border-border rounded p-3 md:p-4 mb-6">
         <h2 className="text-lg font-semibold text-text-primary mb-3">Squad ({club.squad.length} players)</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-text-secondary border-b border-border">
-                <th className="text-left py-2">Name</th>
-                <th className="text-left">Pos</th>
-                <th className="text-left">Age</th>
-                <th className="text-left">Ability</th>
-                <th className="text-left">Potential</th>
-                <th className="text-right">Wage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {club.squad.map((p) => (
-                <tr key={p.id} className="border-b border-border/50 text-text-primary">
-                  <td className="py-1.5">{p.name}</td>
-                  <td>{p.position}</td>
-                  <td>{p.age}</td>
-                  <td>
-                    <span className={p.ability >= 70 ? 'text-positive' : p.ability >= 50 ? 'text-warning' : 'text-negative'}>
-                      {p.ability}
-                    </span>
-                  </td>
-                  <td>{p.potential}</td>
-                  <td className="text-right">${p.wage.toLocaleString()}/w</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CardTable
+          columns={[
+            { header: 'Name', accessor: (p) => p.name },
+            { header: 'Pos', accessor: (p) => p.position, align: 'center' },
+            { header: 'Age', accessor: (p) => p.age, align: 'center' },
+            { header: 'Ability', accessor: (p) => (
+              <span className={p.ability >= 70 ? 'text-positive' : p.ability >= 50 ? 'text-warning' : 'text-negative'}>{p.ability}</span>
+            ), align: 'center' },
+            { header: 'Pot', accessor: (p) => p.potential, align: 'center', hideOnMobile: true },
+            { header: 'Wage', accessor: (p) => `$${p.wage.toLocaleString()}/w`, align: 'right' },
+          ]}
+          data={club.squad}
+          rowKey={(p) => p.id}
+          cardTitle={(p) => p.name}
+          cardSubtitle={(p) => `${p.position} · Age ${p.age}`}
+          cardMeta={(p) => [
+            { label: 'Abil', value: p.ability, color: p.ability >= 70 ? 'text-positive' : p.ability >= 50 ? 'text-warning' : 'text-negative' },
+            { label: 'Wage', value: `$${p.wage.toLocaleString()}/w` },
+          ]}
+        />
       </div>
 
       <div className="flex gap-4 mb-6">

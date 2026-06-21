@@ -40,6 +40,7 @@ export function createLeague(tier: number): League {
       revenueByCategory: { matchday: 0, tv: 0, commercial: 0, prizeMoney: 0, sales: 0 },
       expenseByCategory: { wages: 0, amortization: 0, agentFees: 0, upkeep: 0, interest: 0 },
       rollingLoss3yr: 0,
+      rollingLossHistory: [],
       amortizationSchedule: [],
     },
     squad: generateSquad(cd),
