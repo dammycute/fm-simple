@@ -1,0 +1,22 @@
+[
+  { "name": "Arsenal", "shortName": "ARS", "city": "London", "foundedYear": 1886, "reputation": 95, "stadiumCapacity": 60704 },
+  { "name": "Manchester City", "shortName": "MCI", "city": "Manchester", "foundedYear": 1880, "reputation": 96, "stadiumCapacity": 53400 },
+  { "name": "Manchester United", "shortName": "MUN", "city": "Manchester", "foundedYear": 1878, "reputation": 94, "stadiumCapacity": 74310 },
+  { "name": "Liverpool", "shortName": "LIV", "city": "Liverpool", "foundedYear": 1892, "reputation": 93, "stadiumCapacity": 61276 },
+  { "name": "Chelsea", "shortName": "CHE", "city": "London", "foundedYear": 1905, "reputation": 90, "stadiumCapacity": 40343 },
+  { "name": "Tottenham Hotspur", "shortName": "TOT", "city": "London", "foundedYear": 1882, "reputation": 89, "stadiumCapacity": 62850 },
+  { "name": "Newcastle United", "shortName": "NEW", "city": "Newcastle", "foundedYear": 1892, "reputation": 87, "stadiumCapacity": 52305 },
+  { "name": "Aston Villa", "shortName": "AVL", "city": "Birmingham", "foundedYear": 1874, "reputation": 85, "stadiumCapacity": 42657 },
+  { "name": "Brighton & Hove Albion", "shortName": "BRI", "city": "Brighton", "foundedYear": 1901, "reputation": 82, "stadiumCapacity": 31800 },
+  { "name": "Brentford", "shortName": "BRE", "city": "London", "foundedYear": 1889, "reputation": 78, "stadiumCapacity": 17250 },
+  { "name": "Crystal Palace", "shortName": "CRY", "city": "London", "foundedYear": 1905, "reputation": 80, "stadiumCapacity": 25486 },
+  { "name": "Everton", "shortName": "EVE", "city": "Liverpool", "foundedYear": 1878, "reputation": 83, "stadiumCapacity": 39572 },
+  { "name": "Fulham", "shortName": "FUL", "city": "London", "foundedYear": 1879, "reputation": 78, "stadiumCapacity": 22700 },
+  { "name": "Nottingham Forest", "shortName": "NFO", "city": "Nottingham", "foundedYear": 1865, "reputation": 80, "stadiumCapacity": 30445 },
+  { "name": "AFC Bournemouth", "shortName": "BOU", "city": "Bournemouth", "foundedYear": 1899, "reputation": 76, "stadiumCapacity": 11364 },
+  { "name": "Sunderland", "shortName": "SUN", "city": "Sunderland", "foundedYear": 1879, "reputation": 75, "stadiumCapacity": 49000 },
+  { "name": "Leeds United", "shortName": "LEE", "city": "Leeds", "foundedYear": 1919, "reputation": 82, "stadiumCapacity": 37792 },
+  { "name": "Coventry City", "shortName": "COV", "city": "Coventry", "foundedYear": 1883, "reputation": 72, "stadiumCapacity": 32753 },
+  { "name": "Ipswich Town", "shortName": "IPS", "city": "Ipswich", "foundedYear": 1878, "reputation": 74, "stadiumCapacity": 30311 },
+  { "name": "Hull City", "shortName": "HUL", "city": "Kingston upon Hull", "foundedYear": 1904, "reputation": 70, "stadiumCapacity": 25586 }
+]
