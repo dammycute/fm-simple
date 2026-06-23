@@ -60,7 +60,6 @@ export function generateSquad(club: ClubData): Player[] {
     const age = 17 + Math.floor(Math.random() * 20)
 
     // Potential tied to age
-    const agePeak = 27
     let potentialGap: number
     if (age <= 23) {
       // Young: wide gap, more variance
