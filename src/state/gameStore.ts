@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Club, League, GameEvent, Manager } from '../engine/types'
+import type { Club, League, GameEvent, Manager, Fixture } from '../engine/types'
 import { createAllLeagues } from '../data/leagueGenerator'
 import { simulateWeek, isSeasonComplete, rolloverSeason, computePromotionsRelegations } from '../engine/league'
 import { generateFixtures } from '../engine/fixtures'
 import { generateManager } from '../data/managerGenerator'
 import { buyPlayer as executeBuy } from '../engine/transferMarket'
 import { createExpansionProject, generateSponsorDeal, getSponsorshipSummary } from '../engine/stadium'
-import { pickRandomEvent, resolveEventChoice, type EventTemplate } from '../engine/events'
+import { pickRandomEvent, resolveEventChoice, type EventTemplate, EVENT_TEMPLATES } from '../engine/events'
 import { applyScenarioToClub, checkGameOverConditions, checkMilestones } from '../engine/difficulty'
 import { processWeeklyFinances } from '../engine/finance'
 import { updateBoardConfidence, updateFanTrust, generateSeasonObjective } from '../engine/board'
@@ -25,6 +25,8 @@ export interface GameState {
   pendingEvent: EventTemplate | null
   seasonComplete: boolean
   rolloverData: { promotions: { clubId: string; fromTier: number; toTier: number }[]; relegations: { clubId: string; fromTier: number; toTier: number }[] } | null
+  currentMatch: Fixture | null
+  deferredEvent: { triggerWeek: number; templateId: string } | null
 }
 
 interface GameActions {
@@ -44,6 +46,8 @@ interface GameActions {
   resolveEvent: (choiceIndex: number) => void
   dismissEvent: () => void
   rolloverSeasonAction: () => void
+  dismissMatch: () => void
+  setTransferBudget: (amount: number) => void
 }
 
 type GameStore = GameState & GameActions
@@ -61,6 +65,8 @@ const initialState: GameState = {
   pendingEvent: null,
   seasonComplete: false,
   rolloverData: null,
+  currentMatch: null,
+  deferredEvent: null,
 }
 
 function updateClubInLeagues(leagues: League[], clubId: string, updater: (c: Club) => Club): League[] {
@@ -112,6 +118,7 @@ export const useGameStore = create<GameStore>()(
           gameOver: false,
           gameOverReason: null,
           managerCandidates: [],
+          deferredEvent: null,
         })
       },
 
@@ -124,11 +131,16 @@ export const useGameStore = create<GameStore>()(
 
           const playerLeagueFixtures = playerLeague?.fixtures.filter((f) => f.week === newWeek && f.result) ?? []
 
+          let newMatch: Fixture | null = null
           for (const f of playerLeagueFixtures) {
             const home = playerLeague?.clubs.find((c) => c.id === f.homeId)
             const away = playerLeague?.clubs.find((c) => c.id === f.awayId)
             if (home && away && f.result) {
-              newLog.push(`${home.name} ${f.result.homeGoals}-${f.result.awayGoals} ${away.name}`)
+              if (f.homeId === s.playerClubId || f.awayId === s.playerClubId) {
+                newMatch = f
+              } else {
+                newLog.push(`${home.name} ${f.result.homeGoals}-${f.result.awayGoals} ${away.name}`)
+              }
             }
           }
 
@@ -174,8 +186,19 @@ export const useGameStore = create<GameStore>()(
               clubs: l.clubs.map((c) => (c.id === updatedClub.id ? updatedClub : c)),
             }))
 
-            // Check for random events
-            const newEvent = pickRandomEvent(updatedClub)
+            // Check for deferred events first, then random events
+            let newEvent: EventTemplate | null = null
+            let newDeferredEvent = s.deferredEvent
+            if (s.deferredEvent && s.deferredEvent.triggerWeek <= newWeek) {
+              const defTemplate = EVENT_TEMPLATES.find((t) => t.id === s.deferredEvent!.templateId)
+              if (defTemplate) {
+                newEvent = defTemplate
+              }
+              newDeferredEvent = null
+            }
+            if (!newEvent) {
+              newEvent = pickRandomEvent(updatedClub)
+            }
 
             // Check game-over conditions
             const { gameOver, reason } = checkGameOverConditions(updatedClub, curLeague, updatedClub.boardConfidence)
@@ -187,6 +210,8 @@ export const useGameStore = create<GameStore>()(
                 pendingEvent: null,
                 gameOver: true,
                 gameOverReason: reason,
+                currentMatch: null,
+                deferredEvent: null,
               }
             }
 
@@ -199,13 +224,13 @@ export const useGameStore = create<GameStore>()(
             if (isSeasonComplete(newLeaguesWithFinance)) {
               const { promotions, relegations } = computePromotionsRelegations(newLeaguesWithFinance)
               newLog.push(`Season ${s.season} complete! Review the AGM to proceed.`)
-              return { weekNumber: newWeek, leagues: newLeaguesWithFinance, eventLog: newLog, pendingEvent: null, seasonComplete: true, rolloverData: { promotions, relegations } }
+              return { weekNumber: newWeek, leagues: newLeaguesWithFinance, eventLog: newLog, pendingEvent: null, seasonComplete: true, rolloverData: { promotions, relegations }, currentMatch: null, deferredEvent: null }
             }
 
-            return { weekNumber: newWeek, leagues: newLeaguesWithFinance, eventLog: newLog, pendingEvent: newEvent ?? null }
+            return { weekNumber: newWeek, leagues: newLeaguesWithFinance, eventLog: newLog, pendingEvent: newEvent ?? null, currentMatch: newMatch, deferredEvent: newDeferredEvent }
           }
 
-          return { weekNumber: newWeek, leagues: newLeagues, eventLog: newLog, pendingEvent: null }
+          return { weekNumber: newWeek, leagues: newLeagues, eventLog: newLog, pendingEvent: null, currentMatch: null, deferredEvent: null }
         })
       },
 
@@ -368,21 +393,42 @@ export const useGameStore = create<GameStore>()(
           const club = s.leagues.flatMap((l) => l.clubs).find((c) => c.id === s.playerClubId)
           if (!club) return { ...s, pendingEvent: null }
 
-          const { updatedClub, resultText } = resolveEventChoice(club, s.pendingEvent, choiceIndex)
+          const { updatedClub, resultText, deferredEventId } = resolveEventChoice(club, s.pendingEvent, choiceIndex)
 
           const newLeagues = updateClubInLeagues(s.leagues, s.playerClubId!, () => updatedClub)
+
+          let deferredEvent = s.deferredEvent
+          if (deferredEventId) {
+            const delay = 2 + Math.floor(Math.random() * 4)
+            deferredEvent = { triggerWeek: s.weekNumber + delay, templateId: deferredEventId }
+          }
 
           return {
             leagues: newLeagues,
             pendingEvent: null,
             events: [...s.events, { ...s.pendingEvent, id: `${s.pendingEvent.id}-${Date.now()}`, week: s.weekNumber } as any],
             eventLog: [...s.eventLog, `Event: ${s.pendingEvent.title} — ${resultText}`],
+            deferredEvent,
           }
         })
       },
 
       dismissEvent: () => {
         set({ pendingEvent: null })
+      },
+
+      dismissMatch: () => {
+        set({ currentMatch: null })
+      },
+
+      setTransferBudget: (amount: number) => {
+        set((s) => {
+          const newLeagues = updateClubInLeagues(s.leagues, s.playerClubId!, (c) => ({
+            ...c,
+            finance: { ...c.finance, transferBudget: amount, remainingTransferBudget: amount },
+          }))
+          return { leagues: newLeagues, eventLog: [...s.eventLog, `Transfer budget set to $${amount.toLocaleString()}.`] }
+        })
       },
 
       rolloverSeasonAction: () => {
@@ -410,6 +456,7 @@ export const useGameStore = create<GameStore>()(
             eventLog: newLog,
             seasonComplete: false,
             rolloverData: { promotions, relegations },
+            deferredEvent: null,
           }
         })
       },

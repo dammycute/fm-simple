@@ -25,7 +25,7 @@ export default function TransferMarketPage() {
     const entry = transferList.find((t) => t.player.id === playerId)
     if (!entry) return
 
-    const result = calculateOfferSuccess(bidAmount, entry.player.transferFee, entry.club.reputation)
+    const result = calculateOfferSuccess(bidAmount, entry.player.transferFee, entry.club.reputation, club.reputation, entry.player.ability)
 
     if (result.accepted) {
       buyPlayer(playerId, fromClubId, bidAmount, contractLength, installment)
@@ -63,6 +63,7 @@ export default function TransferMarketPage() {
             ), align: 'center' },
             { header: 'Value', accessor: (e) => `$${e.player.transferFee.toLocaleString()}`, align: 'right' },
             { header: 'Wage', accessor: (e) => `$${e.player.wage.toLocaleString()}`, align: 'right', hideOnMobile: true },
+            { header: 'Tier', accessor: (e) => `T${e.tier}`, align: 'center' },
             { header: 'Club', accessor: (e) => e.club.shortName, hideOnMobile: true },
             { header: '', accessor: (e) => selectedPlayerId === e.player.id ? (
               <div className="flex gap-1 items-center justify-end">

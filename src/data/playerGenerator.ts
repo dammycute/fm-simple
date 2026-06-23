@@ -25,34 +25,71 @@ const lastNames = [
 
 const positions: ('GK' | 'DEF' | 'MID' | 'FWD')[] = ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD', 'FWD']
 
+function pickName(used: Set<string>): string {
+  let name: string
+  do {
+    name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`
+  } while (used.has(name))
+  used.add(name)
+  return name
+}
+
 export function generateSquad(club: ClubData): Player[] {
   const squadSize = 20 + Math.floor(Math.random() * 6)
   const players: Player[] = []
-
   const usedNames = new Set<string>()
+  const reputationScale = club.reputation / 100
+
+  // Designate 3-5 key players (picked before loop so we know which indices)
+  const keyCount = 3 + Math.floor(Math.random() * 3)
+  const keyIndices = new Set<number>()
+  while (keyIndices.size < keyCount) {
+    keyIndices.add(Math.floor(Math.random() * squadSize))
+  }
 
   for (let i = 0; i < squadSize; i++) {
-    let name: string
-    do {
-      name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`
-    } while (usedNames.has(name))
-    usedNames.add(name)
+    const name = pickName(usedNames)
+    const isKey = keyIndices.has(i)
 
-    const reputationScale = club.reputation / 100
-
-    const baseAbility = Math.round(40 + reputationScale * 40 + (Math.random() - 0.5) * 15)
-    const ability = Math.max(20, Math.min(99, baseAbility))
-
-    const potentialGap = Math.floor(Math.random() * 15)
-    const potential = Math.min(99, ability + potentialGap)
+    // Ability: key players get a ceiling bonus, others spread below
+    const baseRaw = 35 + reputationScale * 45
+    const noise = (Math.random() - 0.5) * 20
+    const keyBoost = isKey ? 8 + Math.random() * 12 : 0
+    const ability = Math.max(20, Math.min(99, Math.round(baseRaw + noise + keyBoost)))
 
     const age = 17 + Math.floor(Math.random() * 20)
 
+    // Potential tied to age
+    const agePeak = 27
+    const yearsFromPeak = age - agePeak
+    let potentialGap: number
+    if (age <= 23) {
+      // Young: wide gap, more variance
+      potentialGap = Math.floor(Math.random() * 18) + 5
+    } else if (age <= 27) {
+      // Prime: small upside
+      potentialGap = Math.floor(Math.random() * 8)
+    } else if (age <= 30) {
+      // Early decline: potential at or slightly below ability
+      potentialGap = -3 + Math.floor(Math.random() * 6)
+    } else {
+      // Decline: potential below ability
+      potentialGap = -8 + Math.floor(Math.random() * 4)
+    }
+    const potential = Math.max(20, Math.min(99, ability + potentialGap))
+
     const position = positions[i % positions.length]
 
-    const wage = Math.round(500 + reputationScale * 4000 + (ability - 40) * 50 + Math.random() * 1000)
+    // Non-linear wage: scales roughly with ability^3 / 50^3
+    const abilityRatio = ability / 50
+    const wageFloor = 200 + reputationScale * 1500
+    const wageCurve = 300 * abilityRatio ** 3
+    const wage = Math.round(wageFloor + wageCurve * (1 + Math.random() * 0.3) + reputationScale * 2000)
 
-    const marketValue = Math.round(50000 + reputationScale * 10000000 + ability * 100000 + Math.random() * 500000)
+    // Non-linear market value
+    const valueFloor = 10000 + reputationScale * 500000
+    const valueCurve = 80000 * abilityRatio ** 3
+    const marketValue = Math.round(valueFloor + valueCurve * (0.8 + Math.random() * 0.4))
 
     players.push({
       id: `${club.shortName}-${i}`,

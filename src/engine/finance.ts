@@ -147,9 +147,8 @@ export function processWeeklyFinances(
   const weeklyCommercial = Math.round((club.sponsors?.reduce((s, d) => s + d.annualValue, 0) ?? 0) / totalWeeksInSeason)
   revenue.commercial += weeklyCommercial
 
-  // Wage expense
-  const totalWages = club.squad.reduce((s, p) => s + p.wage, 0) + (club.manager?.wageDemand ?? 0)
-  const weeklyWages = Math.round(totalWages / totalWeeksInSeason)
+  // Wage expense (Player.wage is weekly, sum is the weekly bill)
+  const weeklyWages = club.squad.reduce((s, p) => s + p.wage, 0) + (club.manager?.wageDemand ?? 0)
   expenses.wages += weeklyWages
 
   // Amortization expense

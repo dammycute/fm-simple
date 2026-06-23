@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../state/gameStore'
 import nationalLeagueClubs from '../data/clubs/national-league.json'
 import type { ClubData } from '../engine/types'
-import { CardTable } from '../components/CardTable'
+import { wageToRevenueRatio, wageHealthColor } from '../engine/finance'
 
 const natClubs = (nationalLeagueClubs as ClubData[]).map((c) => ({
   ...c,
@@ -112,83 +112,208 @@ export default function Dashboard() {
     return <p className="text-negative">Error: Club not found.</p>
   }
 
+  // League position & form
+  const sortedTable = [...league.table].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points
+    const gdA = a.goalsFor - a.goalsAgainst
+    const gdB = b.goalsFor - b.goalsAgainst
+    if (gdB !== gdA) return gdB - gdA
+    return b.goalsFor - a.goalsFor
+  })
+  const position = sortedTable.findIndex((r) => r.clubId === playerClubId) + 1
+
+  // Form from last 5 player-club fixtures
+  const allPlayerFixtures = league.fixtures
+    .filter((f) => f.result && (f.homeId === playerClubId || f.awayId === playerClubId))
+    .sort((a, b) => b.week - a.week)
+    .slice(0, 5)
+  const form = allPlayerFixtures.map((f) => {
+    const isHome = f.homeId === playerClubId
+    if (!f.result) return 'd' as const
+    if (isHome && f.result.homeGoals > f.result.awayGoals) return 'w' as const
+    if (!isHome && f.result.awayGoals > f.result.homeGoals) return 'w' as const
+    if (f.result.homeGoals === f.result.awayGoals) return 'd' as const
+    return 'l' as const
+  }).reverse()
+
+  // Next fixture
+  const nextFixture = league.fixtures.find((f) => f.week === weekNumber + 1 && !f.result && (f.homeId === playerClubId || f.awayId === playerClubId))
+  const nextOpponent = nextFixture
+    ? league.clubs.find((c) => c.id === (nextFixture.homeId === playerClubId ? nextFixture.awayId : nextFixture.homeId))
+    : null
+
+  // Finance snapshot
+  const totalRevenue = Object.values(club.finance.revenueByCategory).reduce((a, b) => a + b, 0)
+  const totalWages = club.squad.reduce((s, p) => s + p.wage, 0) + (club.manager?.wageDemand ?? 0)
+  const wtr = wageToRevenueRatio(totalWages, totalRevenue || 1)
+  const wtrStatus = wageHealthColor(wtr)
+
+  const formChip = (r: 'w' | 'd' | 'l', i: number) => {
+    const colors = { w: 'bg-positive text-black', d: 'bg-warning text-black', l: 'bg-negative text-white' }
+    return (
+      <span key={i} className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${colors[r]}`}>
+        {r.toUpperCase()}
+      </span>
+    )
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">{club.name}</h1>
-          <p className="text-text-secondary">{league.name} (Tier {league.tier})</p>
+          <h1 className="text-xl md:text-2xl font-bold text-text-primary">{club.name}</h1>
+          <p className="text-text-secondary text-sm">{league.name} (Tier {league.tier})</p>
         </div>
         <div className="text-right">
-          <p className="text-text-secondary text-sm">Season {useGameStore.getState().season} · Week {weekNumber}</p>
-          <p className="text-text-primary font-semibold">Cash: ${club.finance.cash.toLocaleString()}</p>
+          <p className="text-text-secondary text-xs">Season {useGameStore.getState().season} · Week {weekNumber}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
-        <div className="bg-bg-surface border border-border rounded p-4">
-          <p className="text-text-secondary text-sm">Board Confidence</p>
-          <p className="text-xl font-bold text-positive">{club.boardConfidence}%</p>
+      {/* League Position & Next Fixture */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
+          <p className="text-text-secondary text-xs uppercase tracking-wider">League Position</p>
+          <p className="text-2xl md:text-3xl font-bold text-text-primary mt-1">
+            {position}<span className="text-sm font-normal text-text-secondary">{getOrdinalSuffix(position)}</span>
+          </p>
+          <p className="text-text-secondary text-xs mt-1">
+            {sortedTable[0]?.clubId === playerClubId ? 'Top of the table!' : `${sortedTable[0]?.points - (sortedTable.find((r) => r.clubId === playerClubId)?.points ?? 0)}pts off top`}
+          </p>
+          {form.length > 0 && (
+            <div className="flex gap-1 mt-2">
+              <span className="text-text-secondary text-[10px] mr-1 self-center">Form:</span>
+              {form.map((r, i) => formChip(r, i))}
+            </div>
+          )}
         </div>
-        <div className="bg-bg-surface border border-border rounded p-4">
-          <p className="text-text-secondary text-sm">Fan Trust</p>
-          <p className="text-xl font-bold text-positive">{club.fanTrust}%</p>
-        </div>
-        <div className="bg-bg-surface border border-border rounded p-4">
-          <p className="text-text-secondary text-sm">Stadium Capacity</p>
-          <p className="text-xl font-bold text-text-primary">{club.stadiumCapacity.toLocaleString()}</p>
+
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
+          <p className="text-text-secondary text-xs uppercase tracking-wider">Next Fixture</p>
+          {nextFixture && nextOpponent ? (
+            <>
+              <p className="text-lg font-bold text-text-primary mt-1">
+                {nextFixture.homeId === playerClubId ? 'Home' : 'Away'} vs {nextOpponent.shortName}
+              </p>
+              <p className="text-text-secondary text-xs">
+                Week {nextFixture.week} · {nextOpponent.name}
+              </p>
+              {club.manager && (
+                <p className="text-text-secondary text-xs mt-1">
+                  Approach: <span className="text-accent">{club.manager.philosophy}</span>
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-text-secondary text-sm mt-1">No fixture scheduled</p>
+          )}
         </div>
       </div>
 
-      <div className="bg-bg-surface border border-border rounded p-3 md:p-4 mb-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-3">Squad ({club.squad.length} players)</h2>
-        <CardTable
-          columns={[
-            { header: 'Name', accessor: (p) => p.name },
-            { header: 'Pos', accessor: (p) => p.position, align: 'center' },
-            { header: 'Age', accessor: (p) => p.age, align: 'center' },
-            { header: 'Ability', accessor: (p) => (
-              <span className={p.ability >= 70 ? 'text-positive' : p.ability >= 50 ? 'text-warning' : 'text-negative'}>{p.ability}</span>
-            ), align: 'center' },
-            { header: 'Pot', accessor: (p) => p.potential, align: 'center', hideOnMobile: true },
-            { header: 'Wage', accessor: (p) => `$${p.wage.toLocaleString()}/w`, align: 'right' },
-          ]}
-          data={club.squad}
-          rowKey={(p) => p.id}
-          cardTitle={(p) => p.name}
-          cardSubtitle={(p) => `${p.position} · Age ${p.age}`}
-          cardMeta={(p) => [
-            { label: 'Abil', value: p.ability, color: p.ability >= 70 ? 'text-positive' : p.ability >= 50 ? 'text-warning' : 'text-negative' },
-            { label: 'Wage', value: `$${p.wage.toLocaleString()}/w` },
-          ]}
-        />
+      {/* Finance Snapshot */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className="bg-bg-surface border border-border rounded p-3">
+          <p className="text-text-secondary text-[10px] uppercase tracking-wider">Cash</p>
+          <p className="text-base font-bold text-text-primary">${club.finance.cash.toLocaleString()}</p>
+        </div>
+        <div className="bg-bg-surface border border-border rounded p-3">
+          <p className="text-text-secondary text-[10px] uppercase tracking-wider">Debt</p>
+          <p className={`text-base font-bold ${club.finance.debt > 0 ? 'text-negative' : 'text-positive'}`}>
+            ${club.finance.debt.toLocaleString()}
+          </p>
+        </div>
+        <div className="bg-bg-surface border border-border rounded p-3">
+          <p className="text-text-secondary text-[10px] uppercase tracking-wider">Wage Ratio</p>
+          <p className={`text-base font-bold ${wtrStatus === 'healthy' ? 'text-positive' : wtrStatus === 'risky' ? 'text-warning' : 'text-negative'}`}>
+            {(wtr * 100).toFixed(0)}%
+          </p>
+        </div>
+        <div className="bg-bg-surface border border-border rounded p-3">
+          <p className="text-text-secondary text-[10px] uppercase tracking-wider">PSR</p>
+          <p className={`text-base font-bold ${club.finance.rollingLoss3yr <= 5000000 ? 'text-positive' : 'text-negative'}`}>
+            ${club.finance.rollingLoss3yr.toLocaleString()}
+          </p>
+        </div>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      {/* Board Confidence & Fan Trust */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-bg-surface border border-border rounded p-3">
+          <div className="flex justify-between items-center mb-1">
+            <p className="text-text-secondary text-[10px] uppercase tracking-wider">Board</p>
+            <p className="text-sm font-bold" style={{ color: club.boardConfidence > 50 ? '#34d399' : club.boardConfidence > 25 ? '#fbbf24' : '#f87171' }}>
+              {club.boardConfidence}%
+            </p>
+          </div>
+          <div className="w-full bg-border rounded h-1.5">
+            <div
+              className="h-1.5 rounded transition-all"
+              style={{
+                width: `${club.boardConfidence}%`,
+                backgroundColor: club.boardConfidence > 50 ? '#34d399' : club.boardConfidence > 25 ? '#fbbf24' : '#f87171',
+              }}
+            />
+          </div>
+        </div>
+        <div className="bg-bg-surface border border-border rounded p-3">
+          <div className="flex justify-between items-center mb-1">
+            <p className="text-text-secondary text-[10px] uppercase tracking-wider">Fans</p>
+            <p className="text-sm font-bold" style={{ color: club.fanTrust > 50 ? '#34d399' : club.fanTrust > 25 ? '#fbbf24' : '#f87171' }}>
+              {club.fanTrust}%
+            </p>
+          </div>
+          <div className="w-full bg-border rounded h-1.5">
+            <div
+              className="h-1.5 rounded transition-all"
+              style={{
+                width: `${club.fanTrust}%`,
+                backgroundColor: club.fanTrust > 50 ? '#34d399' : club.fanTrust > 25 ? '#fbbf24' : '#f87171',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3 mb-4">
         <button
           onClick={advanceWeek}
-          className="px-6 py-2 bg-accent text-black font-semibold rounded hover:opacity-90 cursor-pointer"
+          className="flex-1 px-4 py-2.5 bg-accent text-black font-semibold rounded hover:opacity-90 cursor-pointer text-sm"
         >
           Advance Week
         </button>
         <button
           onClick={() => navigate('/squad')}
-          className="px-4 py-2 bg-bg-surface-raised text-text-primary border border-border rounded hover:bg-border cursor-pointer"
+          className="flex-1 px-4 py-2.5 bg-bg-surface-raised text-text-primary border border-border rounded hover:bg-border cursor-pointer text-sm"
         >
-          Full Squad
+          Squad
+        </button>
+        <button
+          onClick={() => navigate('/league')}
+          className="flex-1 px-4 py-2.5 bg-bg-surface-raised text-text-primary border border-border rounded hover:bg-border cursor-pointer text-sm"
+        >
+          Table
         </button>
       </div>
 
+      {/* Activity feed */}
       {eventLog.length > 0 && (
-        <div className="bg-bg-surface border border-border rounded p-4">
-          <h3 className="text-sm font-semibold text-text-secondary mb-2">Event Log</h3>
-          <div className="max-h-40 overflow-y-auto space-y-1">
-            {[...eventLog].reverse().slice(0, 10).map((msg, i) => (
-              <p key={i} className="text-xs text-text-secondary">{msg}</p>
+        <div className="bg-bg-surface border border-border rounded p-3 md:p-4">
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Activity</h3>
+          <div className="max-h-32 overflow-y-auto space-y-1">
+            {[...eventLog].reverse().slice(0, 8).map((msg, i) => (
+              <p key={i} className="text-xs text-text-secondary leading-relaxed">{msg}</p>
             ))}
           </div>
         </div>
       )}
     </div>
   )
+}
+
+function getOrdinalSuffix(n: number): string {
+  if (n === 1) return 'st'
+  if (n === 2) return 'nd'
+  if (n === 3) return 'rd'
+  return 'th'
 }

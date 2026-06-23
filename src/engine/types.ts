@@ -43,6 +43,15 @@ export interface AmortEntry {
   yearsRemaining: number
 }
 
+export interface ClubHistory {
+  seasonsManaged: number
+  bestFinish: number
+  bestTier: number
+  promotions: number
+  relegations: number
+  trophies: string[]
+}
+
 export interface SponsorDeal {
   type: string
   partnerName: string
@@ -68,6 +77,8 @@ export interface FinanceLedger {
   rollingLoss3yr: number
   rollingLossHistory: number[]
   amortizationSchedule: AmortEntry[]
+  transferBudget: number
+  remainingTransferBudget: number
 }
 
 export interface Club {
@@ -89,6 +100,8 @@ export interface Club {
   ticketPrices: { standard: number; premium: number }
   stadiumExpansion: StadiumExpansion | null
   isPlayerClub: boolean
+  history: ClubHistory
+  rivals: string[]
 }
 
 export interface DivisionRules {

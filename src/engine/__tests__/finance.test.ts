@@ -35,6 +35,8 @@ function makeMockClub(id: string, cash: number, rollingLoss: number): Club {
       rollingLoss3yr: rollingLoss,
       rollingLossHistory: [],
       amortizationSchedule: [],
+      transferBudget: 0,
+      remainingTransferBudget: 0,
     },
     squad: [],
     manager: null,
@@ -42,6 +44,8 @@ function makeMockClub(id: string, cash: number, rollingLoss: number): Club {
     ticketPrices: { standard: 20, premium: 0 },
     stadiumExpansion: null,
     isPlayerClub: false,
+    history: { seasonsManaged: 0, bestFinish: 999, bestTier: 2, promotions: 0, relegations: 0, trophies: [] },
+    rivals: [],
   }
 }
 

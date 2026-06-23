@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useGameStore } from '../state/gameStore'
 import { LayoutDashboard, Wallet, Users, ArrowLeftRight, UserCircle, Trophy, Newspaper, Building2, Settings, ChevronUp } from 'lucide-react'
+import MatchCenter from './MatchCenter'
 
 const navItems = [
   { label: 'Home', path: '/', icon: LayoutDashboard },
@@ -21,7 +22,23 @@ const secondaryTabs = navItems.slice(5)
 export default function Layout() {
   const pendingEvent = useGameStore((s) => s.pendingEvent)
   const resolveEvent = useGameStore((s) => s.resolveEvent)
+  const currentMatch = useGameStore((s) => s.currentMatch)
+  const dismissMatch = useGameStore((s) => s.dismissMatch)
+  const leagues = useGameStore((s) => s.leagues)
+  const playerClubId = useGameStore((s) => s.playerClubId)
   const [showMore, setShowMore] = useState(false)
+
+  // Resolve match clubs
+  let matchHome: any, matchAway: any, matchManagerPhi: string | undefined
+  if (currentMatch && playerClubId) {
+    for (const l of leagues) {
+      matchHome = l.clubs.find((c: any) => c.id === currentMatch.homeId)
+      matchAway = l.clubs.find((c: any) => c.id === currentMatch.awayId)
+      if (matchHome && matchAway) break
+    }
+    const playerSide = currentMatch.homeId === playerClubId ? matchHome : matchAway
+    matchManagerPhi = playerSide?.manager?.philosophy
+  }
 
   return (
     <div className="flex h-screen bg-bg-base text-text-primary">
@@ -105,6 +122,17 @@ export default function Layout() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Match Center Modal */}
+        {currentMatch && matchHome && matchAway && (
+          <MatchCenter
+            fixture={currentMatch}
+            homeClub={matchHome}
+            awayClub={matchAway}
+            onDismiss={dismissMatch}
+            managerPhilosophy={matchManagerPhi}
+          />
         )}
 
         {/* Event Modal */}
