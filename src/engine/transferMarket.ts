@@ -106,7 +106,7 @@ export function getTransferList(leagues: import('./types').League[], playerClubI
   const playerRep = playerClub.reputation
   const playerTier = playerClub.tier
 
-  const results: { player: Player; club: Club }[] = []
+  const results: { player: Player; club: Club; tier: number }[] = []
   for (const league of leagues) {
     for (const club of league.clubs) {
       if (club.id === playerClubId) continue

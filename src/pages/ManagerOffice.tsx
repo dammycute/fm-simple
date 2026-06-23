@@ -42,6 +42,11 @@ export default function ManagerOffice() {
 
   const manager = club.manager
 
+  const handleSack = () => {
+    sackManager()
+    setShowConfirmSack(false)
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary mb-4">Manager Office</h1>
